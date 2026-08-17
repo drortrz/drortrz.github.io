@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # main is the branch; master is kept so an older clone still deploys.
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
