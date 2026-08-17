@@ -1,0 +1,200 @@
+---
+// A single dialog serves every zoomable image on the page. Triggers opt in
+// with [data-zoom]; see Gallery.astro and ProjectLayout.astro.
+---
+
+<dialog class="lightbox" data-lightbox aria-label="Enlarged image">
+  <button type="button" class="lightbox-close" data-lightbox-close aria-label="Close">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M5 5 L19 19 M19 5 L5 19" />
+    </svg>
+  </button>
+
+  <img class="lightbox-img" data-lightbox-img alt="" />
+</dialog>
+
+<style>
+  .lightbox {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+    overflow: visible;
+  }
+
+  .lightbox::backdrop {
+    background: rgba(10, 10, 10, 0.94);
+  }
+
+  .lightbox-img {
+    display: block;
+    margin: auto;
+    max-width: 92vw;
+    max-height: 92vh;
+    width: auto;
+    height: auto;
+    /* The FLIP animation scales from the thumbnail, so the origin must match
+       the box we measure against. */
+    transform-origin: top left;
+  }
+
+  /* Deliberately minimal: a thin cross, no button chrome. */
+  .lightbox-close {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+    z-index: 1;
+  }
+
+  .lightbox-close:hover,
+  .lightbox-close:focus-visible {
+    opacity: 1;
+  }
+
+  .lightbox-close svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    stroke-width: 1.25;
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  @media (max-width: 700px) {
+    .lightbox-close {
+      top: 0.75rem;
+      right: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('[data-lightbox]');
+  const image = document.querySelector<HTMLImageElement>('[data-lightbox-img]');
+  const closeButton = document.querySelector<HTMLElement>('[data-lightbox-close]');
+
+  if (dialog && image && closeButton) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+    let origin: HTMLImageElement | null = null; // the thumbnail we grew from
+    let animating = false;
+
+    // Grow the dialog image from the thumbnail's box to its own: measure the
+    // start rect, let the dialog lay out, then animate the difference.
+    function flip(from: DOMRect, reverse = false) {
+      const to = image!.getBoundingClientRect();
+      if (!to.width || !to.height) return null;
+
+      const dx = from.left - to.left;
+      const dy = from.top - to.top;
+      const sx = from.width / to.width;
+      const sy = from.height / to.height;
+
+      const start = { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: 0.4 };
+      const end = { transform: 'translate(0, 0) scale(1, 1)', opacity: 1 };
+
+      return image!.animate(reverse ? [end, start] : [start, end], {
+        duration: reverse ? 300 : 420,
+        easing: EASE,
+        fill: 'both',
+      });
+    }
+
+    function open(trigger: HTMLElement) {
+      const thumb = trigger.querySelector('img');
+      if (!thumb || animating) return;
+
+      origin = thumb as HTMLImageElement;
+      const from = thumb.getBoundingClientRect();
+
+      // Full-resolution variant, and intrinsic size so the dialog can lay out
+      // before the new file has decoded — otherwise the first measurement is wrong.
+      image!.src = thumb.getAttribute('src') ?? '';
+      image!.alt = thumb.getAttribute('alt') ?? '';
+      image!.width = thumb.naturalWidth || thumb.clientWidth;
+      image!.height = thumb.naturalHeight || thumb.clientHeight;
+
+      dialog!.showModal();
+
+      if (reduced) {
+        dialog!.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, fill: 'both' });
+        return;
+      }
+
+      animating = true;
+      const animation = flip(from);
+      if (animation) {
+        animation.finished.finally(() => (animating = false));
+      } else {
+        animating = false;
+      }
+    }
+
+    function close() {
+      if (animating) return;
+
+      const back = origin?.getBoundingClientRect();
+      // If the thumbnail has scrolled out of view there is nothing sensible to
+      // shrink toward, so fall back to a plain fade.
+      const visible = back && back.bottom > 0 && back.top < window.innerHeight;
+
+      if (reduced || !visible || !back) {
+        dialog!.close();
+        return;
+      }
+
+      animating = true;
+      const animation = flip(back, true);
+      if (!animation) {
+        animating = false;
+        dialog!.close();
+        return;
+      }
+
+      animation.finished.finally(() => {
+        animating = false;
+        dialog!.close();
+      });
+    }
+
+    document.addEventListener('click', event => {
+      const trigger = (event.target as HTMLElement).closest<HTMLElement>('[data-zoom]');
+      if (trigger) {
+        event.preventDefault();
+        open(trigger);
+      }
+    });
+
+    closeButton.addEventListener('click', close);
+
+    // Clicking the backdrop — anywhere that is not the image itself.
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) close();
+    });
+
+    // Escape: intercept so the exit animation runs before the dialog closes.
+    dialog.addEventListener('cancel', event => {
+      event.preventDefault();
+      close();
+    });
+
+    // Return focus to the image that was opened.
+    dialog.addEventListener('close', () => {
+      origin?.closest<HTMLElement>('[data-zoom]')?.focus();
+      image!.getAnimations().forEach(a => a.cancel());
+    });
+  }
+</script>

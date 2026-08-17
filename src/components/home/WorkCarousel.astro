@@ -1,0 +1,712 @@
+---
+import ProjectCard from '@components/project/ProjectCard.astro';
+import { getCollection } from 'astro:content';
+
+const projects = (await getCollection('projects')).sort(
+  (a, b) => a.data.order - b.data.order || b.data.date.valueOf() - a.data.date.valueOf()
+);
+---
+
+<section id="work" class="work">
+  <div class="container work-head">
+    <h2 class="label">Selected work</h2>
+    {/* What the row does, shown rather than described. */}
+    <div class="hint">
+      <span class="hint-text">The work row scrolls sideways — drag it, or steer from an edge.</span>
+      <span class="hint-track" aria-hidden="true"><span class="hint-run"></span></span>
+    </div>
+  </div>
+
+  <div class="carousel" data-carousel>
+    <ul class="track" data-track role="list">
+      {projects.map(project => (
+        <li class="slide">
+          <ProjectCard project={project} tile />
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .work {
+    /* Room inside the scroll container for the caption that unfolds below
+       each card — `overflow-x: auto` would otherwise clip it. */
+    --carousel-foot: 6rem;
+    padding-bottom: var(--space-3xl);
+  }
+
+  .work-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+
+  /* .label is defined once in theme.css; only spacing differs here. */
+  .label {
+    margin-bottom: 0;
+  }
+
+  /* A short run of light travelling a hairline — the same gesture the cards
+     make, at the size of a caption. The head aligns on the baseline, which a
+     box with no text in it has no useful version of. */
+  .hint {
+    display: flex;
+    align-self: center;
+  }
+
+  /* The sentence stays for screen readers, which cannot watch an animation. */
+  .hint-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .hint-track {
+    display: block;
+    position: relative;
+    width: 4.5rem;
+    height: 1px;
+    background: var(--color-border);
+    overflow: hidden;
+  }
+
+  .hint-run {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    background: var(--color-text-secondary);
+    animation: hint-run 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* Crosses, then waits — a continuous shuttle reads as a loading bar. */
+  @keyframes hint-run {
+    0% {
+      transform: translateX(-110%);
+    }
+    55%,
+    100% {
+      transform: translateX(230%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hint-run {
+      animation: none;
+    }
+  }
+
+  /* Cards are links, so the pointer cursor is left alone at rest — the drag
+     affordance is not worth weakening the primary action for. Only the drag
+     itself is dressed, and only once it is actually under way. */
+  .carousel.is-dragging,
+  .carousel.is-dragging :global(*) {
+    cursor: grabbing;
+    /* A fling would otherwise select the overlay titles as text. */
+    user-select: none;
+  }
+
+  /* The track scrolls natively: trackpad, swipe and keyboard all work with no
+     JavaScript at all. The loop and the drift are layered on top. */
+  .track {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--grid-gap);
+    list-style: none;
+    margin: 0;
+    padding: 0 var(--space-lg) var(--carousel-foot);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .slide {
+    flex: 0 0 clamp(15rem, 26vw, 22rem);
+    scroll-margin-inline: var(--space-2xl);
+  }
+
+  /* Every second card sits lower — flow without losing the rhythm. Margin,
+     never transform: the card's own hover/reveal owns transform. */
+  @media (min-width: 900px) {
+    .slide:nth-child(even) {
+      margin-top: var(--space-lg);
+    }
+  }
+
+  @media (max-width: 700px) {
+    .slide {
+      flex-basis: 74vw;
+    }
+  }
+</style>
+
+<script>
+  // ---------------------------------------------------------------------
+  // Work carousel — an endless track that drifts on its own.
+  //
+  // Everything here is an enhancement. Without JS the track is still a
+  // natively scrollable, keyboard-navigable row of links.
+  // ---------------------------------------------------------------------
+  const carousel = document.querySelector<HTMLElement>('[data-carousel]');
+  const track = document.querySelector<HTMLElement>('[data-track]');
+
+  if (carousel && track) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const originals = Array.from(track.children) as HTMLElement[];
+    const setCount = originals.length;
+
+    // --- Build the loop --------------------------------------------------
+    // Three copies of the set, parked in the middle one. Whenever the scroll
+    // position crosses a set boundary it is moved back by exactly one set
+    // width, which is invisible because the content there is identical.
+    if (setCount > 0) {
+      for (const copy of [0, 1]) {
+        for (const slide of originals) {
+          const clone = slide.cloneNode(true) as HTMLElement;
+          clone.setAttribute('aria-hidden', 'true');
+          // Clones must not be reachable by tab, or every card appears twice.
+          for (const link of clone.querySelectorAll('a')) link.tabIndex = -1;
+          if (copy === 0) track.insertBefore(clone, originals[0]);
+          else track.appendChild(clone);
+        }
+      }
+    }
+
+    const slides = Array.from(track.children) as HTMLElement[];
+    const cards = Array.from(track.querySelectorAll<HTMLElement>('.project-card.tile'));
+    let setWidth = 0;
+
+    function measure() {
+      // Distance between the same slide in adjacent copies — exact, and
+      // independent of padding and gap.
+      setWidth = setCount > 0 ? slides[setCount].offsetLeft - slides[0].offsetLeft : 0;
+    }
+
+    // `scrollLeft` snaps to whole device pixels, so it cannot be used as the
+    // accumulator: at DPR 1.75 anything under ~0.29px is dropped and 0.35px is
+    // rounded up to 0.571px — a drift asked to run at 21px/s actually runs at
+    // 34. Motion is therefore accumulated in this float and merely *published*
+    // to scrollLeft each frame. Anything scrolling the track by other means
+    // (touch, keyboard, the scrollbar) resyncs it below.
+    let position = 0;
+    /** While set ahead of now, someone else is scrolling and we keep our hands off. */
+    let externalUntil = 0;
+
+    function normalise() {
+      if (setWidth <= 0) return;
+      // Keep the position inside the middle copy.
+      let wrapped = position;
+      while (wrapped >= setWidth * 2) wrapped -= setWidth;
+      while (wrapped < setWidth) wrapped += setWidth;
+      if (wrapped !== position) {
+        position = wrapped;
+        track!.scrollLeft = wrapped;
+      }
+    }
+
+    /** Publish the float to the DOM, wrapping first. */
+    function apply(next: number) {
+      position = next;
+      normalise();
+      track!.scrollLeft = position;
+    }
+
+    measure();
+    if (setWidth > 0) track.scrollLeft = setWidth;
+    position = track.scrollLeft;
+
+    // Widths settle after webfonts and images land; re-measure then, keeping
+    // the visible position rather than jumping.
+    window.addEventListener('load', () => {
+      const offset = position - setWidth;
+      measure();
+      if (setWidth > 0) apply(setWidth + offset);
+    });
+
+    window.addEventListener('resize', () => {
+      measure();
+      apply(position);
+    });
+
+    // The loop must also wrap when the drift is not running — under reduced
+    // motion, or while the visitor is flicking the track by hand.
+    let normalising = false;
+    track.addEventListener(
+      'scroll',
+      () => {
+        if (normalising) return;
+        normalising = true;
+        requestAnimationFrame(() => {
+          // Touch, keyboard and the scrollbar move the track behind our back.
+          // Our own writes land within a device pixel of `position`, so a gap
+          // wider than that is someone else scrolling and the float has to
+          // follow — otherwise the next frame would yank the track back.
+          if (Math.abs(track!.scrollLeft - position) > 2) {
+            position = track!.scrollLeft;
+            // A touch fling is the browser's own momentum, and writing
+            // scrollLeft under it would cancel it. Hold the loop off the
+            // track for a beat and let the gesture finish.
+            externalUntil = performance.now() + 200;
+          }
+          normalise();
+          normalising = false;
+        });
+      },
+      { passive: true }
+    );
+
+    // --- Motion -----------------------------------------------------------
+    // The track behaves like a flywheel. Velocity is a quantity that carries
+    // over between frames; inputs push it rather than set it. Two terms, kept
+    // deliberately apart:
+    //
+    //   ambient — the resting intent (drift / edge steer / held still), eased
+    //             toward its target so state changes ramp instead of snapping
+    //   impulse — momentum from a wheel flick or a drag release, bled off by
+    //             friction
+    //
+    // Collapsed into one number the ease and the friction fight each other and
+    // neither can be tuned. Split, a fling coasts out on its own curve and
+    // settles into whatever the ambient is doing — including easing to a dead
+    // stop when the pointer holds the middle. That settling is the weight.
+    //
+    // All speeds are px per second, scaled by the frame's own delta, so the
+    // feel is identical on a 60Hz and a 120Hz display.
+    const DRIFT = 21;         // at rest — slow, but never still
+    const MAX_SPEED = 960;    // at the very edge
+    const IMPULSE_CEILING = MAX_SPEED * 1.5;
+    const EDGE_ZONE = 0.18;
+    const EASE = 0.12;        // per 60Hz frame, toward the ambient target
+    const FRICTION = 0.88;    // per 60Hz frame, applied to the impulse
+    // The impulse is spent as soon as it is no faster than the drift itself.
+    // Letting it decay all the way to nothing leaves a dead spot after a
+    // backwards flick, where the tail cancels the drift and the track hangs
+    // for a beat before the auto-scroll visibly resumes.
+    const STILL = DRIFT;      // px/s below which the impulse is spent
+
+    let pointerInside = false;
+    let focusInside = false;
+    let pointerTarget = 0; // set from the pointer's distance to an edge
+    let ambient = DRIFT;
+    let impulse = 0;
+    let running = false;
+    let frame = 0;
+    let last = 0;
+
+    function clampImpulse(value: number) {
+      return Math.max(-IMPULSE_CEILING, Math.min(IMPULSE_CEILING, value));
+    }
+
+    function targetVelocity() {
+      if (focusInside) return 0;
+      if (pointerInside) return pointerTarget;
+      return DRIFT;
+    }
+
+    function step(now: number) {
+      // First frame after a start has no previous timestamp to measure from.
+      // Cap the delta so a tab returning from the background does not lurch.
+      const delta = last ? Math.min((now - last) / 1000, 0.05) : 0;
+      last = now;
+      const frames = delta * 60;
+
+      // The hand owns the track outright while dragging; the loop must not
+      // pull against it.
+      if (!dragging) {
+        ambient += (targetVelocity() - ambient) * (1 - Math.pow(1 - EASE, frames));
+      }
+
+      impulse *= Math.pow(FRICTION, frames);
+      if (Math.abs(impulse) < STILL) impulse = 0;
+
+      const velocity = (dragging ? 0 : ambient) + impulse;
+      if (now < externalUntil) {
+        // A native scroll owns the track; follow it rather than fight it.
+        position = track!.scrollLeft;
+      } else if (velocity !== 0 && delta > 0) {
+        apply(position + velocity * delta);
+      }
+
+      // A label can also be overtaken after it appears: the row drifts, and a
+      // card slides under a resting pointer. Checking while one is showing
+      // costs nothing the rest of the time, and guarantees the invariant —
+      // never two labels at once.
+      if (peeking && carousel!.matches(':hover')) dismissPeek();
+
+      frame = requestAnimationFrame(step);
+    }
+
+    function start() {
+      if (running || reduced) return;
+      running = true;
+      last = 0;
+      frame = requestAnimationFrame(step);
+      // Ambient labelling only where there is a pointer to contrast it with.
+      if (canHover) schedulePeek();
+    }
+
+    function stop() {
+      running = false;
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      // Momentum must not survive a hidden tab and resume on return.
+      impulse = 0;
+      clearTimeout(peekTimer);
+      clearPeek();
+    }
+
+    // --- Ambient peek -----------------------------------------------------
+    // With nothing hovered the row is anonymous, so every few seconds one of
+    // the cards nearest the centre of the screen names itself for 2.5s. Only
+    // ever one at a time, and never while the visitor is pointing or reading.
+    const PEEK_HOLD = 2500;
+    const PEEK_GAP_MIN = 2600;
+    const PEEK_GAP_VARY = 3600;
+
+    let peekTimer = 0;
+    let peekHideTimer = 0;
+    let peeking: HTMLElement | null = null;
+
+    function clearPeek() {
+      if (peeking) {
+        peeking.classList.remove('is-peek');
+        peeking = null;
+      }
+      if (peekHideTimer) {
+        clearTimeout(peekHideTimer);
+        peekHideTimer = 0;
+      }
+    }
+
+    function schedulePeek() {
+      clearTimeout(peekTimer);
+      peekTimer = window.setTimeout(
+        showPeek,
+        PEEK_GAP_MIN + Math.random() * PEEK_GAP_VARY
+      );
+    }
+
+    /** Clear the label and queue the next one. */
+    function dismissPeek() {
+      clearPeek();
+      schedulePeek();
+    }
+
+    function showPeek() {
+      // `pointerInside` only updates on mousemove, so it goes stale whenever
+      // the pointer stays put and the page moves underneath it — scrolling to
+      // #work lands the row under a resting cursor without a single mouse
+      // event. `:hover` is the state the card's own styles react to, so ask
+      // that instead: it is the only thing that cannot disagree with what is
+      // on screen.
+      if (!running || pointerInside || focusInside || carousel!.matches(':hover')) {
+        schedulePeek();
+        return;
+      }
+
+      const rect = track!.getBoundingClientRect();
+      const middle = rect.left + rect.width / 2;
+
+      // Candidates: on screen, then the three closest to the centre — so the
+      // choice is random but always lands near where the eye already is.
+      const near = cards
+        .map(card => {
+          const box = card.getBoundingClientRect();
+          return {
+            card,
+            distance: Math.abs((box.left + box.right) / 2 - middle),
+            onScreen: box.right > rect.left && box.left < rect.right,
+          };
+        })
+        .filter(entry => entry.onScreen)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 3);
+
+      if (!near.length) {
+        schedulePeek();
+        return;
+      }
+
+      clearPeek();
+      peeking = near[Math.floor(Math.random() * near.length)].card;
+      peeking.classList.add('is-peek');
+
+      peekHideTimer = window.setTimeout(() => {
+        clearPeek();
+        schedulePeek();
+      }, PEEK_HOLD);
+    }
+
+    // --- Steering ---------------------------------------------------------
+    function onMouseMove(event: MouseEvent) {
+      pointerInside = true;
+      // Anything the pointer is near wins; the ambient label steps aside so
+      // only the hovered card is ever labelled.
+      clearPeek();
+
+      const rect = track!.getBoundingClientRect();
+      const position = (event.clientX - rect.left) / rect.width;
+
+      if (position < EDGE_ZONE) {
+        const t = (EDGE_ZONE - position) / EDGE_ZONE;
+        pointerTarget = -(t * t) * MAX_SPEED;
+      } else if (position > 1 - EDGE_ZONE) {
+        const t = (position - (1 - EDGE_ZONE)) / EDGE_ZONE;
+        pointerTarget = (t * t) * MAX_SPEED;
+      } else {
+        // Hovering the middle holds the track still so a card can be read.
+        pointerTarget = 0;
+      }
+    }
+
+    function onMouseLeave() {
+      pointerInside = false; // hand back to the drift
+      schedulePeek();
+    }
+
+    const canHover = window.matchMedia('(hover: hover)').matches;
+
+    if (!reduced && canHover) {
+      carousel.addEventListener('mousemove', onMouseMove);
+      carousel.addEventListener('mouseleave', onMouseLeave);
+    }
+
+    // --- Wheel ------------------------------------------------------------
+    // Vertical wheel drives the track only in the edge zones, so the middle
+    // stays the "stop and read" zone and a visitor wheeling down the page is
+    // never trapped at the work section. Horizontal delta — a trackpad swipe
+    // or shift+wheel — is taken anywhere over the carousel: there is no page
+    // scroll to trap on that axis, and refusing it would leave swipes
+    // stopping dead while every other input coasts.
+    const WHEEL_GAIN_Y = 6;
+    const WHEEL_GAIN_X = 2.5;
+
+    function wheelPixels(value: number, mode: number, page: number) {
+      if (mode === 1) return value * 16; // lines
+      if (mode === 2) return value * page; // pages
+      return value;
+    }
+
+    function onWheel(event: WheelEvent) {
+      const rect = track!.getBoundingClientRect();
+      let push =
+        wheelPixels(event.deltaX, event.deltaMode, rect.width) * WHEEL_GAIN_X;
+
+      const vertical = wheelPixels(event.deltaY, event.deltaMode, rect.width);
+      if (vertical) {
+        const position = (event.clientX - rect.left) / rect.width;
+        if (position < EDGE_ZONE || position > 1 - EDGE_ZONE) {
+          push += vertical * WHEEL_GAIN_Y;
+        }
+      }
+
+      if (!push) return;
+      event.preventDefault();
+      // Trackpads already send an OS-decayed train of deltas and our friction
+      // compounds on top of it, so the ceiling matters more than the gain.
+      impulse = clampImpulse(impulse + push);
+    }
+
+    // --- Drag -------------------------------------------------------------
+    // Mouse only: touch already has native scrolling with its own momentum,
+    // and handling pointer events there would fight it.
+    const DRAG_THRESHOLD = 6; // px of travel before this counts as a drag
+    const DRAG_STALE = 80;    // ms — a pause before release means no fling
+
+    let armed = false; // button is down, but this is not yet a drag
+    let dragging = false;
+    let dragId = -1;
+    let dragX = 0;
+    let dragTime = 0;
+    let dragMoved = 0;
+    let dragVelocity = 0;
+    let suppressClick = false;
+
+    function onPointerDown(event: PointerEvent) {
+      if (event.pointerType !== 'mouse' || event.button !== 0) return;
+      // Pressing only arms the gesture. Until it crosses the threshold this
+      // stays an ordinary click and the browser is left completely alone.
+      armed = true;
+      dragging = false;
+      dragId = event.pointerId;
+      suppressClick = false;
+      dragX = event.clientX;
+      dragTime = event.timeStamp;
+      dragMoved = 0;
+      dragVelocity = 0;
+    }
+
+    function onPointerMove(event: PointerEvent) {
+      if (!armed || event.pointerId !== dragId) return;
+      const dx = event.clientX - dragX;
+      const elapsed = Math.max(event.timeStamp - dragTime, 1);
+      dragX = event.clientX;
+      dragTime = event.timeStamp;
+      dragMoved += Math.abs(dx);
+
+      if (!dragging) {
+        if (dragMoved <= DRAG_THRESHOLD) return;
+        dragging = true;
+        impulse = 0;
+        carousel!.classList.add('is-dragging');
+        // Capture is deliberately withheld until the gesture is genuinely a
+        // drag. Capturing on pointerdown retargets the compatibility mouse
+        // events to the carousel, so the card's own <a> never receives the
+        // click and no project can be opened.
+        try {
+          carousel!.setPointerCapture(event.pointerId);
+        } catch {
+          /* pointer already released */
+        }
+      }
+
+      // Dragging right pulls the content right, which is scrollLeft going
+      // down. A single delta is too noisy to fling on, so smooth it.
+      dragVelocity = dragVelocity * 0.7 + ((-dx / elapsed) * 1000) * 0.3;
+      apply(position - dx);
+    }
+
+    function onPointerUp(event: PointerEvent) {
+      if (!armed || event.pointerId !== dragId) return;
+      armed = false;
+      dragId = -1;
+      if (!dragging) return; // a plain click — nothing to undo
+
+      dragging = false;
+      carousel!.classList.remove('is-dragging');
+      if (carousel!.hasPointerCapture(event.pointerId)) {
+        carousel!.releasePointerCapture(event.pointerId);
+      }
+
+      const stale = event.timeStamp - dragTime > DRAG_STALE;
+      impulse = stale ? 0 : clampImpulse(dragVelocity);
+      // The threshold was crossed, so this release ends a drag, not a click:
+      // without this a fling would also open whatever card it landed on.
+      suppressClick = true;
+    }
+
+    if (!reduced) {
+      carousel.addEventListener('wheel', onWheel, { passive: false });
+      carousel.addEventListener('pointerdown', onPointerDown);
+      carousel.addEventListener('pointermove', onPointerMove);
+      carousel.addEventListener('pointerup', onPointerUp);
+      carousel.addEventListener('pointercancel', onPointerUp);
+      // The card is a link wrapping an image — both are natively draggable,
+      // and the browser's own drag would otherwise hijack the gesture.
+      carousel.addEventListener('dragstart', event => event.preventDefault());
+      carousel.addEventListener(
+        'click',
+        event => {
+          if (!suppressClick) return;
+          suppressClick = false;
+          event.preventDefault();
+          event.stopPropagation();
+        },
+        true
+      );
+    }
+
+    // Pause while a card holds keyboard focus, so reading is never yanked.
+    // Deliberately NOT plain focusin: clicking or dragging a card leaves it
+    // focused with the mouse, which would hold the drift at a standstill for
+    // good — the visitor clicks once and the carousel never moves again.
+    // :focus-visible is the same test the card's own styles use.
+    carousel.addEventListener('focusin', event => {
+      const target = event.target as HTMLElement;
+      if (!target.matches?.(':focus-visible')) return;
+      focusInside = true;
+      clearPeek();
+    });
+    carousel.addEventListener('focusout', () => {
+      focusInside = false;
+    });
+
+    // --- Only animate while the section is actually on screen -------------
+    if ('IntersectionObserver' in window) {
+      const visibility = new IntersectionObserver(
+        entries => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) start();
+            else stop();
+          }
+        },
+        { threshold: 0 }
+      );
+      visibility.observe(carousel);
+    } else {
+      start();
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else start();
+    });
+
+    // --- Centre spy (touch) ----------------------------------------------
+    // Touch devices cannot hover, so the card nearest the horizontal centre
+    // of the track labels itself instead.
+    let spying = false;
+    let ticking = false;
+
+    function updateSpy() {
+      const rect = track!.getBoundingClientRect();
+      const middle = rect.left + rect.width / 2;
+      let best: HTMLElement | null = null;
+      let bestDistance = Infinity;
+
+      for (const card of cards) {
+        const box = card.getBoundingClientRect();
+        if (box.right <= rect.left || box.left >= rect.right) continue;
+        const distance = Math.abs((box.left + box.right) / 2 - middle);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = card;
+        }
+      }
+
+      for (const card of cards) card.classList.toggle('is-active', card === best);
+    }
+
+    function onTrackScroll() {
+      if (!spying || ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        updateSpy();
+        ticking = false;
+      });
+    }
+
+    function enableSpy() {
+      if (spying || !cards.length) return;
+      spying = true;
+      for (const card of cards) card.classList.add('spy');
+      updateSpy();
+      track!.addEventListener('scroll', onTrackScroll, { passive: true });
+      window.addEventListener('resize', onTrackScroll);
+    }
+
+    function disableSpy() {
+      spying = false;
+      for (const card of cards) card.classList.remove('spy', 'is-active');
+      track!.removeEventListener('scroll', onTrackScroll);
+      window.removeEventListener('resize', onTrackScroll);
+    }
+
+    const hoverless = window.matchMedia('(hover: none)');
+    if (hoverless.matches) enableSpy();
+    hoverless.addEventListener('change', e => (e.matches ? enableSpy() : disableSpy()));
+  }
+</script>

@@ -1,0 +1,229 @@
+@import "tailwindcss";
+
+/* ===== DESIGN TOKENS =====
+   Edit these to change the entire look of your site.
+   All components reference these variables. */
+
+:root {
+  /* Colors — monochrome on a warm off-white. The photography supplies all the
+     colour; the interface stays out of its way. */
+  --color-bg: #fffefc;
+  --color-text: #000000;
+  --color-text-secondary: #6b6b6b;
+  --color-accent: #000000;
+  --color-accent-hover: #6b6b6b;
+  --color-border: #e3e1dc;
+  --color-surface: #f4f2ee;
+
+  /* Typography — two voices: a grotesk for display and UI, and a light
+     editorial serif for prose, which is what makes the page feel airy. */
+  /* Group 1 — headlines: bold modern grotesk. */
+  --font-display: 'Inter', system-ui, sans-serif;
+  /* Group 2 — the designer's own voice: a modern, screen-first text serif.
+     Newsreader has a large x-height, so it stays readable set light. */
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  /* Group 3 — labels, meta, supporting copy: the headline family, set small. */
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Measure: prose is capped in characters, not pixels, so lines break where
+     the eye can still find the next one. */
+  --measure-prose: 38ch;
+  --measure-info: 46ch;
+
+  /* Spacing (8px base) */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+  --space-xl: 4rem;
+  --space-2xl: 8rem;
+  /* Reserved for the big breathing room between page sections. */
+  --space-3xl: 14rem;
+
+  /* Layout */
+  --max-width: 1400px;
+  --nav-height: 4rem;
+  --border-radius: 0;
+  /* Tight gutter between image blocks, as in the printed spreads. */
+  --grid-gap: 0.5rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  /* Slow, decelerating ease — things arrive rather than snap. */
+  --transition-slow: 700ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== SCROLL REVEAL =====
+   Elements rise into place as they enter the viewport. Gated on `has-js`
+   (set inline in the head) so that without JS nothing is ever hidden. */
+.has-js .reveal {
+  opacity: 0;
+  transform: translateY(2rem);
+  transition:
+    opacity var(--transition-slow) var(--ease-out-expo),
+    transform var(--transition-slow) var(--ease-out-expo);
+  transition-delay: calc(var(--reveal-index, 0) * 70ms);
+  will-change: opacity, transform;
+}
+
+.has-js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .has-js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0a0a0a;
+    --color-text: #fafafa;
+    --color-text-secondary: #a0a0a0;
+    --color-accent: #fafafa;
+    --color-accent-hover: #a0a0a0;
+    --color-border: #262626;
+    --color-surface: #141414;
+  }
+}
+
+/* ===== BASE STYLES ===== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Anchored sections stop clear of the sticky navbar instead of under it. */
+section[id] {
+  scroll-margin-top: var(--nav-height);
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Container utility */
+.container {
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding-inline: var(--space-lg);
+}
+
+/* ===== TYPOGRAPHY ===== */
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+/* Page and project titles are set uppercase, as in the printed portfolio.
+   Section headings stay sentence case for readability. */
+h1 {
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+h2 { font-size: clamp(1.75rem, 3.5vw, 2.5rem); }
+h3 { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
+
+/* Headlines are short; balance them so no line is left with a single word. */
+h1, h2, h3, h4 {
+  text-wrap: balance;
+}
+
+/* ===== TEXT ROLES =====
+   Three groups, used everywhere. Components reach for these rather than
+   restating font stacks, which is what kept blocks drifting out of alignment.
+   Every role is flush left with no indent, so a label, a paragraph and a list
+   all share one left edge. */
+
+/* Group 3 — labels above a block. */
+.label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  /* Stated rather than inherited: these are h2 elements, and the heading rule
+     above would otherwise pull them to 1.15 and lift the section content. */
+  line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-lg);
+}
+
+/* Group 2 — the designer speaking in the first person. */
+.lead {
+  font-family: var(--font-serif);
+  font-weight: 300;
+  font-size: clamp(1.2rem, 1.9vw, 1.7rem);
+  line-height: 1.5;
+  letter-spacing: 0;
+  max-width: var(--measure-prose);
+  /* Avoids orphans and ragged short last lines. */
+  text-wrap: pretty;
+  margin: 0 0 var(--space-md);
+}
+
+/* Group 3 — supporting information and explanation. */
+.info {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  max-width: var(--measure-info);
+  text-wrap: pretty;
+  margin: 0;
+}
+
+/* Darker variant for information that carries weight rather than context. */
+.info-strong {
+  color: var(--color-text);
+}
+
+/* Lists that read as text: no marker, no indent, same left edge as prose. */
+.list-plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== LINKS ===== */
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}

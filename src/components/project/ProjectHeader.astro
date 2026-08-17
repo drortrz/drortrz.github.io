@@ -1,0 +1,83 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  role?: string;
+  date: Date;
+  tools?: string[];
+  tags: string[];
+}
+
+const { title, description, role, date, tools, tags } = Astro.props;
+---
+
+{/* The text panel. In the printed portfolio all copy sits in a narrow left
+    column beside the images — this component is that column. */}
+<div class="project-text">
+  <h1>{title}</h1>
+  <p class="project-desc">{description}</p>
+
+  <slot />
+
+  <dl class="project-meta">
+    {role && (
+      <div class="meta-item">
+        <dt>Role</dt>
+        <dd>{role}</dd>
+      </div>
+    )}
+    <div class="meta-item">
+      <dt>Date</dt>
+      <dd>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</dd>
+    </div>
+    {tools && tools.length > 0 && (
+      <div class="meta-item">
+        <dt>Tools</dt>
+        <dd>{tools.join(', ')}</dd>
+      </div>
+    )}
+    {tags.length > 0 && (
+      <div class="meta-item">
+        <dt>Tags</dt>
+        <dd>{tags.join(', ')}</dd>
+      </div>
+    )}
+  </dl>
+</div>
+
+<style>
+  .project-text h1 {
+    /* Restrained, print-scale title — the images carry the page. */
+    font-size: clamp(1.4rem, 1.8vw, 1.9rem);
+    margin-bottom: var(--space-md);
+  }
+
+  .project-desc {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+  }
+
+  .project-meta {
+    margin: var(--space-xl) 0 0;
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-border);
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .meta-item dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.2rem;
+  }
+
+  .meta-item dd {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+</style>

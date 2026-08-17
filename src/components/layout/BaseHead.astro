@@ -1,0 +1,50 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+}
+
+import { withBase } from '@utils/url';
+
+// Every page needs a share image: without one, a link posted anywhere renders
+// as a blank card. Project pages override this with their own cover.
+const { title, description, image = withBase('/og.jpg') } = Astro.props;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="generator" content={Astro.generator} />
+
+<!-- SEO -->
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+<link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+
+<!--
+  Two families, three roles:
+  · Inter Bold/ExtraBold — headlines
+  · Newsreader Light     — first-person prose (a modern, screen-first serif)
+  · Inter Regular/Medium — small labels, meta and captions
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap"
+/>
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+{image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+{image && <meta name="twitter:image" content={new URL(image, Astro.site)} />}

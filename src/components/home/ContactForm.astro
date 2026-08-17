@@ -1,0 +1,167 @@
+---
+import { siteConfig } from '@config/site';
+
+const endpoint = siteConfig.contactEndpoint ?? '';
+const email = siteConfig.contactEmail;
+---
+
+<form
+  class="contact-form"
+  data-contact-form
+  data-endpoint={endpoint}
+  data-email={email}
+  method="post"
+  action={endpoint || `mailto:${email}`}
+>
+  <div class="field">
+    <label for="contact-name">Name</label>
+    <input id="contact-name" name="name" type="text" required autocomplete="name" />
+  </div>
+
+  <div class="field">
+    <label for="contact-email">Email</label>
+    <input id="contact-email" name="email" type="email" required autocomplete="email" />
+  </div>
+
+  <div class="field">
+    <label for="contact-message">Message</label>
+    <textarea id="contact-message" name="message" rows="5" required></textarea>
+  </div>
+
+  <button type="submit" class="submit">Send</button>
+
+  <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+
+  {!endpoint && (
+    <p class="form-note">
+      This opens your email app with the message ready to send.
+    </p>
+  )}
+</form>
+
+<style>
+  .contact-form {
+    display: grid;
+    gap: var(--space-lg);
+    max-width: 34rem;
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-secondary);
+  }
+
+  input,
+  textarea {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-text);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.6rem 0;
+    border-radius: 0;
+    transition: border-color var(--transition-fast);
+  }
+
+  input:focus,
+  textarea:focus {
+    outline: none;
+    border-bottom-color: var(--color-text);
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .submit {
+    justify-self: start;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text);
+    background: transparent;
+    border: 1px solid var(--color-text);
+    padding: 0.75em 2em;
+    cursor: pointer;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .submit:hover {
+    background: var(--color-text);
+    color: var(--color-bg);
+  }
+
+  .form-status:empty {
+    display: none;
+  }
+
+  .form-status,
+  .form-note {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+  }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+
+  if (form) {
+    const status = form.querySelector<HTMLElement>('[data-form-status]');
+    const endpoint = form.dataset.endpoint ?? '';
+    const email = form.dataset.email ?? '';
+
+    form.addEventListener('submit', async event => {
+      if (!form.reportValidity()) return;
+      event.preventDefault();
+
+      const data = new FormData(form);
+      const name = String(data.get('name') ?? '');
+      const from = String(data.get('email') ?? '');
+      const message = String(data.get('message') ?? '');
+
+      // No endpoint configured: hand the message to the visitor's mail client
+      // rather than pretending to have sent it.
+      if (!endpoint) {
+        const subject = encodeURIComponent(`Portfolio enquiry from ${name}`);
+        const body = encodeURIComponent(`${message}\n\n— ${name}\n${from}`);
+        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+        if (status) status.textContent = 'Opening your email app…';
+        return;
+      }
+
+      if (status) status.textContent = 'Sending…';
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          body: data,
+        });
+
+        if (response.ok) {
+          form.reset();
+          if (status) status.textContent = 'Thanks — your message is on its way.';
+        } else {
+          throw new Error(String(response.status));
+        }
+      } catch {
+        // Never lose the message: fall back to the mail client.
+        const subject = encodeURIComponent(`Portfolio enquiry from ${name}`);
+        const body = encodeURIComponent(`${message}\n\n— ${name}\n${from}`);
+        if (status) {
+          status.textContent = "That didn't send — opening your email app instead.";
+        }
+        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      }
+    });
+  }
+</script>

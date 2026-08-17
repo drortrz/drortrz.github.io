@@ -1,0 +1,479 @@
+---
+import { siteConfig } from '@config/site';
+import { withBase } from '@utils/url';
+
+// Wide screens get the headline strip: each headline has three resting
+// places — parked left (passed), centre (current), parked right (ahead) —
+// and only the current one ever travels.
+//
+// Below 700px there is no room for that. Four headlines plus their gaps
+// measure 298px inside 311px of usable width on a 375px phone, so nothing
+// can move. The narrow bar drops the strip entirely and carries the name, a
+// menu, and the progress hairline instead.
+const beats = [
+  { label: siteConfig.name, href: withBase('/#top'), section: 'top' },
+  ...siteConfig.nav.map(link => ({
+    label: link.label,
+    href: withBase(link.href),
+    section: link.href.split('#')[1] ?? '',
+  })),
+];
+---
+
+<nav class="navbar" aria-label="Main navigation">
+  <div class="beats" data-beats>
+    {beats.map(beat => (
+      <a href={beat.href} class="beat" data-beat={beat.section}>
+        {/* Two copies stacked in one grid cell. The bold one always sets the
+            width, so going bold cannot widen the word mid-slide. */}
+        <span class="beat-label">{beat.label}</span>
+        <span class="beat-label is-bold" aria-hidden="true">{beat.label}</span>
+      </a>
+    ))}
+  </div>
+
+  <div class="compact">
+    <a href={withBase('/#top')} class="compact-name">{siteConfig.name}</a>
+    <button
+      type="button"
+      class="compact-toggle"
+      data-menu-toggle
+      aria-expanded="false"
+      aria-controls="site-menu"
+    >
+      Menu
+    </button>
+  </div>
+
+  {/* Continuous scroll progress on the bar's own hairline — the one thing
+      that is the same at every width. */}
+  <span class="navbar-progress" aria-hidden="true">
+    <span class="navbar-progress-fill" data-nav-progress></span>
+  </span>
+</nav>
+
+<div class="site-menu" id="site-menu" data-menu hidden>
+  <ul class="site-menu-list" role="list">
+    {siteConfig.nav.map(link => (
+      <li>
+        <a href={withBase(link.href)} class="site-menu-link" data-menu-link>{link.label}</a>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--nav-height);
+    background-color: color-mix(in srgb, var(--color-bg) 85%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* ===== Wide: the headline strip ===== */
+  .beats {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    padding: 0 var(--space-lg);
+  }
+
+  /* Every headline is absolutely placed and driven only by its own transform,
+     so each travels independently. Without JS they stack at the left edge and
+     are all still legible and clickable. */
+  .beat {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    display: inline-grid;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 400;
+    text-decoration: none;
+    white-space: nowrap;
+    transform: translate(0, -50%);
+    transform-origin: center center;
+  }
+
+  /* Enabled after the opening positions are set, or every headline would fly
+     in from the left on each page load. */
+  .beats.is-ready .beat {
+    transition: transform 760ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .beat-label {
+    grid-area: 1 / 1;
+    color: var(--color-text-secondary);
+    transition:
+      color var(--transition-fast),
+      opacity 460ms ease;
+  }
+
+  .beat-label.is-bold {
+    font-weight: 700;
+    color: var(--color-text);
+    opacity: 0;
+  }
+
+  .beat:hover .beat-label {
+    color: var(--color-text);
+  }
+
+  .beat[aria-current='true'] .beat-label {
+    opacity: 0;
+  }
+
+  .beat[aria-current='true'] .beat-label.is-bold {
+    opacity: 1;
+  }
+
+  /* ===== Narrow: name and menu ===== */
+  .compact {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 var(--space-lg);
+  }
+
+  .compact-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .compact-toggle {
+    background: none;
+    border: none;
+    padding: var(--space-xs) 0;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-secondary);
+    transition: color var(--transition-fast);
+  }
+
+  .compact-toggle[aria-expanded='true'],
+  .compact-toggle:hover {
+    color: var(--color-text);
+  }
+
+  @media (max-width: 699px) {
+    .beats {
+      display: none;
+    }
+
+    .compact {
+      display: flex;
+    }
+  }
+
+  /* ===== Progress hairline ===== */
+  .navbar-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .navbar-progress-fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--color-text);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 120ms linear;
+  }
+
+  /* ===== Menu panel ===== */
+  .site-menu[hidden] {
+    display: none;
+  }
+
+  .site-menu {
+    position: fixed;
+    inset: var(--nav-height) 0 0 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    background-color: var(--color-bg);
+    padding: var(--space-lg);
+    opacity: 0;
+    transition: opacity 240ms ease;
+  }
+
+  .site-menu.is-visible {
+    opacity: 1;
+  }
+
+  .site-menu-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .site-menu-link {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 12vw, 3rem);
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .beats.is-ready .beat,
+    .beat-label,
+    .navbar-progress-fill,
+    .site-menu {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // ---------------------------------------------------------------------
+  // Headline strip (wide screens only).
+  //
+  // Each headline has three resting places, two of which are in play at any
+  // moment: parkedLeft(i) for everything passed, the centre for the current
+  // section, parkedRight(i) for everything ahead. The parked slots are
+  // computed from the headline widths alone and so do not depend on which
+  // headline is current — which is what keeps the inactive ones still.
+  // ---------------------------------------------------------------------
+  const viewport = document.querySelector<HTMLElement>('[data-beats]');
+  const beats = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-beat]')
+  );
+
+  if (viewport && beats.length) {
+    const SCALE = 1.34; // how much bigger the current headline sits
+    const GAP = 20; // px between parked headlines
+    const wide = window.matchMedia('(min-width: 700px)');
+
+    let widths: number[] = [];
+    let parkedLeft: number[] = [];
+    let parkedRight: number[] = [];
+    let boxWidth = 0;
+    let padLeft = 0;
+    let padRight = 0;
+    let current = -1;
+
+    function measure() {
+      const style = getComputedStyle(viewport!);
+      padLeft = parseFloat(style.paddingLeft) || 0;
+      padRight = parseFloat(style.paddingRight) || 0;
+      boxWidth = viewport!.clientWidth;
+      widths = beats.map(beat => beat.offsetWidth);
+
+      parkedLeft = [];
+      let x = padLeft;
+      for (const width of widths) {
+        parkedLeft.push(x);
+        x += width + GAP;
+      }
+
+      // Computed from the right, so a headline leaving the group does not
+      // shuffle the ones remaining in it.
+      parkedRight = [];
+      let right = boxWidth - padRight;
+      for (let i = widths.length - 1; i >= 0; i--) {
+        right -= widths[i];
+        parkedRight[i] = right;
+        right -= GAP;
+      }
+    }
+
+    /** The middle, unless that would run the enlarged headline into a parked
+        group, in which case it stops short of one. */
+    function centreFor(index: number) {
+      const half = (widths[index] * SCALE) / 2;
+      const leftEnd =
+        index > 0 ? parkedLeft[index - 1] + widths[index - 1] : padLeft;
+      const rightStart =
+        index < beats.length - 1 ? parkedRight[index + 1] : boxWidth - padRight;
+
+      const min = leftEnd + GAP + half;
+      const max = rightStart - GAP - half;
+      const middle = boxWidth / 2;
+      const centre =
+        max >= min ? Math.min(Math.max(middle, min), max) : (min + max) / 2;
+
+      return centre - widths[index] / 2;
+    }
+
+    function place() {
+      if (current < 0 || !wide.matches) return;
+      beats.forEach((beat, i) => {
+        let x: number;
+        if (i === current) x = centreFor(i);
+        else if (i < current) x = parkedLeft[i];
+        else x = parkedRight[i];
+
+        const scale = i === current ? SCALE : 1;
+        beat.style.transform = `translate(${x.toFixed(2)}px, -50%) scale(${scale})`;
+      });
+    }
+
+    function setCurrent(index: number) {
+      if (index === current) return;
+      current = index;
+      beats.forEach((beat, i) =>
+        beat.setAttribute('aria-current', i === index ? 'true' : 'false')
+      );
+      place();
+    }
+
+    // Read the section straight off the scroll position rather than watching
+    // a band of the viewport: a band can be empty between two sections, and
+    // scrolling back up through the gap would leave the headline stuck.
+    const sections = beats.map(beat =>
+      document.getElementById(beat.dataset.beat ?? '')
+    );
+    const hasSections = sections.some(Boolean);
+
+    function indexForScroll() {
+      const doc = document.documentElement;
+      // At the very bottom the last section may never reach the line.
+      if (window.scrollY + window.innerHeight >= doc.scrollHeight - 2) {
+        for (let i = sections.length - 1; i >= 0; i--) if (sections[i]) return i;
+      }
+
+      const line = window.scrollY + window.innerHeight * 0.35;
+      let index = 0;
+      sections.forEach((section, i) => {
+        if (section && section.offsetTop <= line) index = i;
+      });
+      return index;
+    }
+
+    let ticking = false;
+
+    function onScroll() {
+      if (ticking || !wide.matches) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setCurrent(indexForScroll());
+        ticking = false;
+      });
+    }
+
+    function refresh() {
+      if (!wide.matches) return;
+      measure();
+      place();
+    }
+
+    if (wide.matches) {
+      measure();
+      setCurrent(hasSections ? indexForScroll() : 0);
+    }
+    requestAnimationFrame(() => viewport.classList.add('is-ready'));
+
+    // Widths settle once the webfonts land.
+    window.addEventListener('load', refresh);
+    window.addEventListener('resize', refresh);
+
+    // Crossing the breakpoint: the strip was never measured while hidden, so
+    // set it up the first time it becomes visible.
+    wide.addEventListener('change', () => {
+      if (!wide.matches) return;
+      measure();
+      current = -1;
+      setCurrent(hasSections ? indexForScroll() : 0);
+    });
+
+    if (hasSections) {
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+  }
+
+  // --- Menu (narrow screens) ---------------------------------------------
+  const menuToggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const menu = document.querySelector<HTMLElement>('[data-menu]');
+
+  if (menuToggle && menu) {
+    let closing = 0;
+
+    function openMenu() {
+      clearTimeout(closing);
+      menu!.hidden = false;
+      // A frame between unhiding and the class, or there is nothing to
+      // transition from.
+      requestAnimationFrame(() => menu!.classList.add('is-visible'));
+      menuToggle!.setAttribute('aria-expanded', 'true');
+      menuToggle!.textContent = 'Close';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+      menu!.classList.remove('is-visible');
+      menuToggle!.setAttribute('aria-expanded', 'false');
+      menuToggle!.textContent = 'Menu';
+      document.body.style.overflow = '';
+      closing = window.setTimeout(() => (menu!.hidden = true), 240);
+    }
+
+    function isOpen() {
+      return menuToggle!.getAttribute('aria-expanded') === 'true';
+    }
+
+    menuToggle.addEventListener('click', () => (isOpen() ? closeMenu() : openMenu()));
+
+    for (const link of menu.querySelectorAll('[data-menu-link]')) {
+      link.addEventListener('click', closeMenu);
+    }
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && isOpen()) {
+        closeMenu();
+        menuToggle!.focus();
+      }
+    });
+
+    // Widening past the breakpoint hides the toggle; the panel must not be
+    // left open and covering the page.
+    window.matchMedia('(min-width: 700px)').addEventListener('change', event => {
+      if (event.matches && isOpen()) closeMenu();
+    });
+  }
+
+  // --- Progress hairline --------------------------------------------------
+  const progress = document.querySelector<HTMLElement>('[data-nav-progress]');
+
+  if (progress) {
+    let ticking = false;
+
+    function update() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progress!.style.transform = `scaleX(${ratio.toFixed(4)})`;
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        update();
+        ticking = false;
+      });
+    }
+
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+  }
+</script>

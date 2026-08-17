@@ -1,0 +1,53 @@
+---
+import { siteConfig } from '@config/site';
+---
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-links">
+      {siteConfig.social.map(link => (
+        <a href={link.href} target="_blank" rel="noopener noreferrer" class="footer-link">
+          {link.label}
+        </a>
+      ))}
+    </div>
+    <p class="footer-copy">
+      &copy; {new Date().getFullYear()} {siteConfig.name}
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-top: var(--space-2xl);
+    padding: var(--space-xl) 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .footer-link {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .footer-link:hover {
+    color: var(--color-text);
+  }
+
+  .footer-copy {
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+  }
+</style>

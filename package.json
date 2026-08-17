@@ -1,0 +1,22 @@
+{
+  "name": "portfolio",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "ingest": "node scripts/ingest.mjs",
+    "watch": "node scripts/watch-inbox.mjs",
+    "publish": "node scripts/publish.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.3.0",
+    "@napi-rs/canvas": "^1.0.6",
+    "@tailwindcss/vite": "^4.1.0",
+    "astro": "^5.8.0",
+    "pdfjs-dist": "^6.2.108",
+    "sharp": "^0.33.0",
+    "tailwindcss": "^4.1.0"
+  }
+}

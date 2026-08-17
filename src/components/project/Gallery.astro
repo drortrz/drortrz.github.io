@@ -1,0 +1,102 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface GalleryItem {
+  src: ImageMetadata;
+  alt: string;
+  span?: number;
+  small?: boolean;
+}
+
+interface Props {
+  items: GalleryItem[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <section class="gallery" aria-label="Project gallery">
+    {items.map(item => (
+      <figure
+        class:list={['gallery-item', { wide: item.span === 2, small: item.small }]}
+        style={`--ratio:${(item.src.width / item.src.height).toFixed(4)};--maxw:${item.src.width}px`}
+      >
+        {/* A real button, so the lightbox opens from the keyboard too. The
+            image's alt becomes the button's accessible name. */}
+        <button type="button" class="zoom" data-zoom>
+          <Image
+            src={item.src}
+            alt={item.alt}
+            widths={[600, 1000, 1600]}
+            sizes="(max-width: 900px) 100vw, 70vw"
+            loading="lazy"
+          />
+        </button>
+      </figure>
+    ))}
+  </section>
+)}
+
+<style>
+  /* Justified rows. Every image keeps its original crop — nothing is trimmed
+     to fit a box. Each item is sized in proportion to its own aspect ratio
+     (--ratio, set inline from the image metadata), so a row of mixed shapes
+     scales to a shared height and fills the width exactly. */
+  .gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--grid-gap);
+    margin-top: var(--space-xl);
+  }
+
+  .gallery-item {
+    margin: 0;
+    min-width: 0;
+    flex-grow: calc(var(--ratio) * 100);
+    flex-basis: calc(var(--ratio) * 260px);
+    /* Never scale an image past its own pixel width — a low-resolution
+       sketch stays small rather than being stretched soft to fill a row. */
+    max-width: var(--maxw);
+  }
+
+  /* A hero image claims its own full-width row, still uncropped. */
+  .gallery-item.wide {
+    flex: 0 0 100%;
+  }
+
+  /* Supporting material: half the base width, so several share one row and
+     the row still justifies to the full column. */
+  .gallery-item.small {
+    flex-basis: calc(var(--ratio) * 130px);
+  }
+
+  /* Bare button: no chrome, just a hit area the size of the image. */
+  .zoom {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+  }
+
+  .gallery-item img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: opacity var(--transition-normal);
+  }
+
+  .gallery-item:hover img {
+    opacity: 0.88;
+  }
+
+  @media (max-width: 700px) {
+    .gallery-item,
+    .gallery-item.wide {
+      flex: 0 0 100%;
+    }
+  }
+</style>

@@ -1,0 +1,543 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import { withBase } from '@utils/url';
+
+const software = [
+  'Rhino 8', 'SolidWorks', 'Fusion 360',
+  'KeyShot', 'V-Ray', 'Vizcom', 'Meshy',
+  'Photoshop', 'Illustrator', 'InDesign',
+];
+
+// Which projects were made with each application. Derived from every project's
+// `software` field rather than listed here, so a project added later links
+// itself up without this file being touched.
+const projects = (await getCollection('projects')).sort(
+  (a, b) => a.data.order - b.data.order
+);
+
+const madeWith = new Map(
+  software.map(tool => [
+    tool,
+    projects.filter(project =>
+      (project.data.software ?? []).some(
+        name => name.toLowerCase() === tool.toLowerCase()
+      )
+    ),
+  ])
+);
+
+// Reverse-chronological, newest first — the ongoing degree sits last because
+// it is the oldest start date, not because it matters least.
+const education = [
+  {
+    title: 'Erasmus+ program to UTB in Zlín, Czech Republic',
+    place: 'EGOE collaboration industrial design workshop',
+    year: '2026',
+  },
+  {
+    title: 'Ferrero SpA × Bezalel Academy',
+    place: 'Kinder Toy 2025 Workshop — First Place',
+    year: '2025',
+  },
+  {
+    title: 'HAKOL',
+    place: 'Hands-on speaker design and build workshop',
+    year: '2025',
+  },
+  {
+    title: 'B.Des in Industrial Design',
+    place: 'Bezalel Academy of Arts and Design, Jerusalem',
+    year: '2023 – Present',
+  },
+];
+
+const languages = ['Hebrew (Native)', 'Spanish (Native)', 'English (Highly Proficient)'];
+---
+
+<section id="about" class="about container">
+  <h2 class="label">About</h2>
+
+  <div class="about-grid">
+    <div class="about-prose">
+      <p class="lead">
+        I am an industrial designer who believes in functional empathy, playful
+        aesthetics, and the power of collaborative teamwork. With a strong
+        commitment to sustainable and green design principles, I strive to
+        create thoughtful products that prioritize the human experience and the
+        Joy of Use.
+      </p>
+
+      <h3 class="sub">What I do best</h3>
+      <ul class="strengths list-plain info info-strong" role="list">
+        <li>CAD &amp; parametric modeling</li>
+        <li>Visualization &amp; presentation design</li>
+        <li>Empathetic design &amp; teamwork</li>
+        <li>AI-assisted concept development</li>
+        <li>Curious autodidact</li>
+      </ul>
+    </div>
+
+    <div class="about-side">
+      <h3 class="sub">Education &amp; workshops</h3>
+      <ul class="timeline" role="list">
+        {education.map(item => (
+          <li class="timeline-item">
+            <span class="timeline-year">{item.year}</span>
+            <div>
+              <p class="timeline-title">{item.title}</p>
+              <p class="timeline-place">{item.place}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <h3 class="sub">Software &amp; digital tools</h3>
+      <ul class="pills" role="list">
+        {software.map(tool => {
+          const made = madeWith.get(tool) ?? [];
+          /* A tool with nothing behind it stays an ordinary pill — better an
+             inert label than one that invites a hover and answers with an
+             empty box. */
+          if (!made.length) return <li>{tool}</li>;
+
+          return (
+            <li class="pill-has-work" data-tool>
+              <button type="button" class="pill-button" aria-expanded="false">
+                {tool}
+                <span class="pill-count" aria-hidden="true">{made.length}</span>
+              </button>
+
+              <div class="pill-work" data-tool-work>
+                <ul class="pill-thumbs" role="list">
+                  {made.map(project => (
+                    <li>
+                      <a href={withBase(`/projects/${project.id}`)} class="pill-thumb">
+                        {/* No visible caption, so the title has to live in the
+                            alt — otherwise the link has no accessible name at
+                            all and reads as an empty destination. */}
+                        <Image
+                          src={project.data.thumb ?? project.data.cover}
+                          alt={project.data.title}
+                          width={120}
+                          height={120}
+                          loading="lazy"
+                        />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <h3 class="sub">Languages</h3>
+      <ul class="pills" role="list">
+        {languages.map(language => <li>{language}</li>)}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about {
+    padding-bottom: var(--space-3xl);
+  }
+
+  /* .label, .lead, .info and .list-plain come from theme.css so every block
+     on the page shares one definition and one left edge. */
+  .label {
+    margin-bottom: var(--space-xl);
+  }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: var(--space-2xl);
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .about-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
+  }
+
+  .lead {
+    margin-bottom: var(--space-xl);
+  }
+
+  /* Sub-headings belong to group 3, not to the headline group: they label a
+     block rather than announce a section. */
+  .sub {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    margin-bottom: var(--space-md);
+  }
+
+  .about-side .sub + .pills {
+    margin-bottom: var(--space-xl);
+  }
+
+  /* Flush left, no marker, no indent — this is what was out of alignment
+     with the paragraph above it. */
+  .strengths {
+    line-height: 2;
+  }
+
+  .timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-xl);
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .timeline-item {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: var(--space-md);
+    align-items: start;
+  }
+
+  @media (max-width: 600px) {
+    .timeline-item {
+      grid-template-columns: 1fr;
+      gap: var(--space-xs);
+    }
+  }
+
+  .timeline-year {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+    padding-top: 0.25rem;
+  }
+
+  /* Group 3, two weights: the darker line carries, the softer one explains. */
+  .timeline-title {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-text);
+    text-wrap: pretty;
+  }
+
+  .timeline-place {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+    margin-top: 0.15rem;
+  }
+
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .pills li {
+    padding: 0.4em 1em;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+  }
+
+  /* ===== Tools that have work behind them =====
+     The pill becomes a button and shows what was made with it. Padding moves
+     onto the button so the whole pill is the hit area, not just its text. */
+  .pills li.pill-has-work {
+    position: relative;
+    padding: 0;
+    border-color: var(--color-text-secondary);
+  }
+
+  .pill-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.4em 1em;
+    background: none;
+    border: none;
+    border-radius: inherit;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+  }
+
+  .pill-count {
+    font-size: 0.65em;
+    letter-spacing: 0.08em;
+    opacity: 0.7;
+  }
+
+  .pill-has-work:hover .pill-button,
+  .pill-button[aria-expanded='true'] {
+    color: var(--color-text);
+  }
+
+  /* Pinned by a click: the pill reads as switched on, since the fan now stays
+     up after the pointer has gone. */
+  .pill-has-work[data-pinned] {
+    border-color: var(--color-text);
+  }
+
+  /* The fan opens over the neighbouring pills, so they step back while it is
+     out — otherwise the circles read as clutter on top of a list rather than
+     as the answer to the tool being pointed at. Direct children only: the
+     circles themselves are also `li` inside .pills. */
+  .pills:has(.pill-has-work.is-open) > li:not(.is-open) {
+    opacity: 0.25;
+  }
+
+  .pills > li {
+    transition: opacity 260ms ease;
+  }
+
+  /* A point, not a panel. Fixed so the cluster can sit over the cursor
+     wherever it is; the script writes --x/--y as the anchor. Kept in the DOM
+     and merely scaled away, so the links stay reachable by keyboard. */
+  .pill-work {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: 0;
+    height: 0;
+    transform: translate(var(--x, 0px), var(--y, 0px));
+    pointer-events: none;
+  }
+
+  .pill-has-work.is-open .pill-work {
+    pointer-events: auto;
+  }
+
+  .pill-thumbs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* These sit inside .pills, which would otherwise style each one as a pill. */
+  .pill-thumbs li {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0;
+    border: none;
+    /* Placed on a fan around the anchor; --dx/--dy come from the script. */
+    transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px))
+      scale(0.2);
+    opacity: 0;
+    /* The overshoot is the pop. Each one lands a beat after the last. */
+    transition:
+      transform 420ms cubic-bezier(0.34, 1.4, 0.5, 1),
+      opacity 180ms ease;
+    transition-delay: calc(var(--i) * 40ms);
+  }
+
+  .pill-has-work.is-open .pill-thumbs li {
+    transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px))
+      scale(1);
+    opacity: 1;
+  }
+
+  .pill-thumb {
+    display: block;
+    width: 2.75rem;
+    height: 2.75rem;
+    text-decoration: none;
+  }
+
+  .pill-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    /* The page behind is dark and so are several covers; the ring is what
+       keeps each circle a distinct object. */
+    box-shadow: 0 0 0 1px var(--color-border);
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .pill-thumb:hover img,
+  .pill-thumb:focus-visible img {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 2px var(--color-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pill-thumbs li {
+      transition: opacity 120ms ease;
+      transition-delay: 0ms;
+      transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px));
+    }
+  }
+
+</style>
+
+<script>
+  // ---------------------------------------------------------------------
+  // Tool pills: the work made with each one pops out as a fan of circles
+  // around the pointer.
+  //
+  // Opening is driven from script rather than :hover, because there is bare
+  // page between the pill and the circles — a CSS hover would drop the moment
+  // the cursor crossed it, and the circles would vanish on the way to being
+  // clicked.
+  // ---------------------------------------------------------------------
+  const RADIUS_MIN = 56; // how far the circles sit from the anchor
+  const SPACING = 52; // centre-to-centre gap two neighbours need to stay clear
+  // A wide spread is what lets the circles sit close: the same six on a
+  // narrower fan would have to be pushed twice as far out to stop colliding.
+  const FAN = (200 * Math.PI) / 180; // centred straight up
+  const THUMB = 22; // half a circle
+  const EDGE = 8; // breathing room against the window
+  const GRACE = 140; // ms of tolerance for crossing the gap
+
+  const tools = Array.from(document.querySelectorAll<HTMLElement>('[data-tool]'));
+  let closeTimer = 0;
+
+  /** Pinned by a click: the fan stays up so one of them can be chosen. */
+  const isPinned = (tool: HTMLElement) => tool.dataset.pinned === 'true';
+
+  /** Force a fan shut, pinned or not. */
+  function dismiss(tool: HTMLElement) {
+    delete tool.dataset.pinned;
+    tool.classList.remove('is-open');
+    tool.querySelector('.pill-button')?.setAttribute('aria-expanded', 'false');
+  }
+
+  function closeAll(except?: HTMLElement) {
+    for (const tool of tools) {
+      if (tool !== except) dismiss(tool);
+    }
+  }
+
+  for (const tool of tools) {
+    const button = tool.querySelector<HTMLButtonElement>('.pill-button');
+    const panel = tool.querySelector<HTMLElement>('[data-tool-work]');
+    const items = Array.from(tool.querySelectorAll<HTMLElement>('.pill-thumbs li'));
+    if (!button || !panel || !items.length) continue;
+
+    // Enough radius that the circles never touch, however many there are.
+    // The constraint is the straight-line gap between neighbours, not the arc
+    // between them: two circles are chord-distance apart, and using arc length
+    // here understates it and lets them collide.
+    const radius =
+      items.length > 1
+        ? Math.max(
+            RADIUS_MIN,
+            SPACING / (2 * Math.sin(FAN / (2 * (items.length - 1))))
+          )
+        : RADIUS_MIN;
+    const reach = radius + THUMB + EDGE;
+
+    items.forEach((item, i) => {
+      const angle =
+        items.length === 1
+          ? -Math.PI / 2
+          : -Math.PI / 2 - FAN / 2 + (FAN / (items.length - 1)) * i;
+      item.style.setProperty('--dx', `${Math.round(Math.cos(angle) * radius)}px`);
+      item.style.setProperty('--dy', `${Math.round(Math.sin(angle) * radius)}px`);
+      item.style.setProperty('--i', String(i));
+    });
+
+    /** Anchor the fan, kept far enough inside the window to fit whole. */
+    function anchor(x: number, y: number) {
+      const width = document.documentElement.clientWidth;
+      const height = document.documentElement.clientHeight;
+      const clampedX =
+        reach * 2 > width ? width / 2 : Math.min(Math.max(x, reach), width - reach);
+      // The fan opens upward, so only the top needs real clearance.
+      const clampedY = Math.min(Math.max(y, reach), height - THUMB - EDGE);
+      panel!.style.setProperty('--x', `${Math.round(clampedX)}px`);
+      panel!.style.setProperty('--y', `${Math.round(clampedY)}px`);
+    }
+
+    function open(x: number, y: number) {
+      clearTimeout(closeTimer);
+      closeAll(tool);
+      anchor(x, y);
+      tool.classList.add('is-open');
+      button!.setAttribute('aria-expanded', 'true');
+    }
+
+    /** Leaving only closes an unpinned fan. */
+    function close() {
+      if (isPinned(tool)) return;
+      dismiss(tool);
+    }
+
+    tool.addEventListener('pointerenter', event => {
+      if (event.pointerType === 'touch') return; // tap handles those
+      if (isPinned(tool)) return; // already held open; do not re-anchor
+      open(event.clientX, event.clientY);
+    });
+
+    tool.addEventListener('pointerleave', event => {
+      if (event.pointerType === 'touch') return;
+      clearTimeout(closeTimer);
+      closeTimer = window.setTimeout(close, GRACE);
+    });
+
+    // Keyboard: no pointer to sit under, so the fan hangs off the pill itself.
+    button.addEventListener('focus', () => {
+      const pill = tool.getBoundingClientRect();
+      open(pill.left + pill.width / 2, pill.top);
+    });
+
+    tool.addEventListener('focusout', event => {
+      if (tool.contains(event.relatedTarget as Node)) return;
+      close();
+    });
+
+    // A click pins the fan up, so the pointer can leave the pill and travel to
+    // whichever circle is wanted without it closing on the way. This is also
+    // the whole interaction on touch, which has no hover to open it.
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      clearTimeout(closeTimer);
+
+      if (isPinned(tool)) {
+        dismiss(tool);
+        return;
+      }
+
+      // Re-anchoring an already-open fan would make it jump under the cursor.
+      if (!tool.classList.contains('is-open')) {
+        const pill = tool.getBoundingClientRect();
+        open(pill.left + pill.width / 2, pill.top);
+      }
+      tool.dataset.pinned = 'true';
+    });
+  }
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeAll();
+  });
+
+  document.addEventListener('click', event => {
+    if ((event.target as HTMLElement).closest('[data-tool]')) return;
+    closeAll();
+  });
+</script>

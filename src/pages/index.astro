@@ -1,0 +1,129 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import WorkCarousel from '@components/home/WorkCarousel.astro';
+import AboutSection from '@components/home/AboutSection.astro';
+import ContactForm from '@components/home/ContactForm.astro';
+import { siteConfig } from '@config/site';
+import portrait from '@assets/portrait.jpg';
+
+const disciplines = [
+  'Industrial Design',
+  'CAD & Parametric Modeling',
+  'Visualization',
+  'Sustainable Design',
+];
+---
+
+<BaseLayout title={siteConfig.title} description={siteConfig.description}>
+  <!-- 1. Intro — who, before what. -->
+  <section id="top" class="hero container">
+    <h1 class="hero-name">{siteConfig.name}</h1>
+
+    <div class="hero-body">
+      <ul class="disciplines" role="list">
+        {disciplines.map(d => <li>{d}</li>)}
+      </ul>
+
+      <figure class="hero-portrait">
+        <Image
+          src={portrait}
+          alt="Portrait of Dror Trzewik"
+          widths={[400, 900]}
+          sizes="(max-width: 900px) 60vw, 32vw"
+        />
+      </figure>
+    </div>
+  </section>
+
+  <!-- 2. Work — the projects, once, as a horizontal track. -->
+  <WorkCarousel />
+
+  <!-- 3. About -->
+  <AboutSection />
+
+  <!-- 4. Contact -->
+  <section id="contact" class="contact container">
+    <h2 class="label">Contact</h2>
+    <p class="lead">Interested in working together?</p>
+    <ContactForm />
+  </section>
+</BaseLayout>
+
+<style>
+  /* Anchors glide because theme.css sets scroll-behavior: smooth — the offset
+     keeps headings clear of the sticky navbar on arrival. */
+  .hero,
+  .contact {
+    scroll-margin-top: var(--nav-height);
+  }
+
+  .hero {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-3xl);
+  }
+
+  .hero-name {
+    font-size: clamp(2.5rem, 9vw, 7.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: var(--space-2xl);
+  }
+
+  .hero-body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-xl);
+    align-items: end;
+  }
+
+  @media (max-width: 900px) {
+    .hero-body {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+  }
+
+  /* The light serif is what makes the page breathe. */
+  .disciplines {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-family: var(--font-serif);
+    font-weight: 300;
+    /* Newsreader has a larger x-height than the face it replaced, so it needs
+       less point size to read at the same optical weight. */
+    font-size: clamp(1.5rem, 3.2vw, 2.6rem);
+    line-height: 1.3;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  .hero-portrait {
+    margin: 0;
+    width: min(24rem, 32vw);
+  }
+
+  @media (max-width: 900px) {
+    .hero-portrait {
+      width: min(18rem, 60vw);
+    }
+  }
+
+  .hero-portrait :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .contact {
+    padding-bottom: var(--space-3xl);
+  }
+
+  /* .label and .lead come from theme.css — one definition site for all three
+     text groups. Only the local spacing is overridden here. */
+  .lead {
+    margin-bottom: var(--space-xl);
+  }
+</style>

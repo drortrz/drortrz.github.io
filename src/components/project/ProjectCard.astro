@@ -1,0 +1,291 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { withBase } from '@utils/url';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  /** Uniform grid tile: cover-cropped image, title revealed on hover. */
+  tile?: boolean;
+}
+
+const { project, tile = false } = Astro.props;
+const { title, description, tags, cover } = project.data;
+const href = project.data.externalUrl || withBase(`/projects/${project.id}`);
+---
+
+<a
+  href={href}
+  class:list={['project-card', { tile }]}
+  target={project.data.externalUrl ? '_blank' : undefined}
+>
+  <div class="card-image">
+    <Image
+      src={cover}
+      alt={title}
+      widths={[400, 800, 1200]}
+      sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
+      loading="lazy"
+    />
+  </div>
+
+  {tile ? (
+    <div class="card-overlay">
+      <h3 class="overlay-title">{title}</h3>
+      <p class="overlay-meta">
+        <span>{project.data.date.getFullYear()}</span>
+        {tags[0] && <span>{tags[0]}</span>}
+      </p>
+    </div>
+  ) : (
+    <div class="card-content">
+      <h3 class="card-title">{title}</h3>
+      <p class="card-desc">{description}</p>
+      <div class="card-tags">
+        {tags.map(tag => <span class="tag">{tag}</span>)}
+      </div>
+    </div>
+  )}
+</a>
+
+<style>
+  /* Flat, borderless cards: the image is the card, text sits beneath it.
+     Mirrors the printed spreads, where images meet with a hairline gutter. */
+  .project-card {
+    display: block;
+    text-decoration: none;
+    color: var(--color-text);
+  }
+
+  .card-image {
+    background: var(--color-surface);
+  }
+
+  /* Natural aspect ratio — covers are shown as shot, never trimmed to a
+     uniform box. Card heights vary as a result, which the grid allows for. */
+  .card-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: opacity var(--transition-normal);
+  }
+
+  .project-card:hover .card-image img {
+    opacity: 0.88;
+  }
+
+  /* ===== Tile variant (the /work index grid) =====
+     Uniform cells in full colour. On approach the card lifts above its
+     neighbours and the caption unfolds out past the bottom edge of the frame —
+     the frame clips the photograph, never the information. */
+  .project-card.tile {
+    position: relative;
+    overflow: visible;
+    z-index: 0;
+  }
+
+  /* Raised so the escaping caption is never covered by the next tile. */
+  .project-card.tile:hover,
+  .project-card.tile:focus-visible,
+  .project-card.tile.is-active,
+  .project-card.tile.is-peek {
+    z-index: 3;
+  }
+
+  /* Scroll reveal. `reveal` is added by work.astro, so without JS the tiles
+     are simply visible and nothing depends on the observer running. */
+  .project-card.tile.reveal {
+    opacity: 0;
+    transform: translateY(2.25rem);
+    transition:
+      opacity 760ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
+      transform 760ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+  }
+
+  .project-card.tile.reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .project-card.tile .card-image {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+  }
+
+  .project-card.tile .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Long, decelerating ease: the "slow" in slowly out of frame. */
+    transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .project-card.tile:hover .card-image img,
+  .project-card.tile:focus-visible .card-image img,
+  .project-card.tile.is-active .card-image img,
+  .project-card.tile.is-peek .card-image img {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  /* Sits just below the frame and slightly wider than it, so on reveal the
+     caption reads as escaping the image rather than sitting inside it. */
+  .card-overlay {
+    position: absolute;
+    top: 100%;
+    left: -0.35rem;
+    right: -0.35rem;
+    /* 10px of left indent so the caption is not flush with the frame edge —
+       the box still overhangs on both sides, only the text steps in. */
+    padding: var(--space-sm) 0 0 10px;
+    /* Kept in the DOM and merely faded, so assistive tech still reads it. */
+    opacity: 0;
+    transform: translateY(-0.6rem) scale(0.96);
+    transform-origin: top left;
+    pointer-events: none;
+    transition:
+      opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Deliberately NOT :focus-within — that matches click focus too, so a card
+     stayed lit after being clicked, with no pointer anywhere near it.
+     :focus-visible covers the keyboard case without the sticking. */
+  .project-card.tile:hover .card-overlay,
+  .project-card.tile:focus-visible .card-overlay,
+  .project-card.tile.is-active .card-overlay,
+  .project-card.tile.is-peek .card-overlay {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .overlay-title {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    transition: letter-spacing 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .project-card.tile:hover .overlay-title,
+  .project-card.tile.is-active .overlay-title,
+  .project-card.tile.is-peek .overlay-title {
+    letter-spacing: 0.06em;
+  }
+
+  /* The meta trails the title out by a beat — the staggered part of the flourish. */
+  .overlay-meta {
+    margin: 0.35rem 0 0;
+    display: flex;
+    gap: var(--space-md);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-secondary);
+    opacity: 0;
+    transform: translateY(-0.4rem);
+    transition:
+      opacity 520ms cubic-bezier(0.16, 1, 0.3, 1) 120ms,
+      transform 620ms cubic-bezier(0.16, 1, 0.3, 1) 120ms;
+  }
+
+  .project-card.tile:hover .overlay-meta,
+  .project-card.tile:focus-visible .overlay-meta,
+  .project-card.tile.is-active .overlay-meta,
+  .project-card.tile.is-peek .overlay-meta {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Touch devices have no hover, so without JS every caption stays visible and
+     no tile is left unlabelled. */
+  @media (hover: none) {
+    .card-overlay,
+    .overlay-meta {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Scroll-spy. `.spy` is added by work.astro only where hover is
+     unavailable, so the condition lives in one place; these rules simply
+     react to the class and outrank the fallback above on specificity. */
+  .project-card.tile.spy .card-overlay {
+    opacity: 0;
+    transform: translateY(-0.6rem) scale(0.96);
+  }
+
+  .project-card.tile.spy .overlay-meta {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+
+  .project-card.tile.spy.is-active .card-overlay {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .project-card.tile.spy.is-active .overlay-meta {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Honour reduced motion: keep the reveal and the caption, drop the travel. */
+  @media (prefers-reduced-motion: reduce) {
+    .project-card.tile:hover .card-image img,
+    .project-card.tile.is-active .card-image img {
+      transform: none;
+    }
+
+    .project-card.tile.reveal,
+    .project-card.tile.reveal.in-view {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+
+    .card-overlay,
+    .overlay-meta {
+      transform: none !important;
+    }
+  }
+
+  .card-content {
+    padding: var(--space-md) 0 0;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    font-weight: 700;
+    margin-bottom: var(--space-xs);
+  }
+
+  .card-desc {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-md);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .tag {
+    font-size: 0.75rem;
+    padding: 0.2em 0.6em;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+  }
+</style>

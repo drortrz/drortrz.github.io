@@ -1,0 +1,114 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from './BaseLayout.astro';
+import ProjectHeader from '@components/project/ProjectHeader.astro';
+import Gallery from '@components/project/Gallery.astro';
+import Lightbox from '@components/project/Lightbox.astro';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const { title, description, cover, coverAlt, role, date, tools, tags, gallery } = project.data;
+---
+
+<BaseLayout
+  title={`${title} — Portfolio`}
+  description={description}
+  image={cover.src}
+>
+  {/* Spread layout: narrow text column left, image field right — the
+      structure used on every page of the printed portfolio. */}
+  <article class="project container">
+    <ProjectHeader {title} {description} {role} {date} {tools} {tags}>
+      <div class="project-body">
+        <slot />
+      </div>
+    </ProjectHeader>
+
+    <div class="project-media">
+      <figure class="project-cover">
+        <button type="button" class="zoom" data-zoom>
+          <Image
+            src={cover}
+            alt={coverAlt ?? title}
+            widths={[600, 1000, 1600]}
+            sizes="(max-width: 900px) 100vw, 72vw"
+          />
+        </button>
+      </figure>
+
+      {gallery && gallery.length > 0 && <Gallery items={gallery} />}
+    </div>
+  </article>
+
+  <Lightbox />
+</BaseLayout>
+
+<style>
+  .project {
+    display: grid;
+    grid-template-columns: minmax(220px, 23%) 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-2xl);
+  }
+
+  @media (max-width: 900px) {
+    .project {
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+  }
+
+  .project-media {
+    min-width: 0;
+  }
+
+  .project-cover {
+    margin: 0;
+  }
+
+  .project-cover :global(.zoom) {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+  }
+
+  .project-cover :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Cover and gallery read as one image field, not two blocks. */
+  .project-media :global(.gallery) {
+    margin-top: var(--grid-gap);
+  }
+
+  /* Body copy sits in the left column with the title, as in print. */
+  .project-body :global(h2) {
+    font-size: 0.95rem;
+    text-transform: none;
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-xs);
+    letter-spacing: 0;
+  }
+
+  .project-body :global(p) {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+  }
+
+  .project-body :global(strong) {
+    color: var(--color-text);
+  }
+</style>
