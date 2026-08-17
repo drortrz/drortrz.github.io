@@ -1,7 +1,7 @@
 ---
 title: "Motion Stool"
 description: "A multi-position seating object blending CNC fabrication with hand-woven craftsmanship — transitioning from stable stool to playful rocker."
-date: 2025-01-01
+date: 2023-01-01
 tags: ["Furniture", "Digital Fabrication", "Craft"]
 role: "Industrial Designer — in collaboration with Nevo Gat"
 tools: ["CNC", "Hand Weaving"]
@@ -15,7 +15,7 @@ gallery:
     alt: "The CNC-cut plywood seat in use, showing the rocking position"
     span: 2
 featured: false
-order: 4 # B.Des coursework — newest first within the group
+order: 5 # B.Des coursework — newest first within the group
 ---
 
 ## Overview

@@ -28,7 +28,9 @@ const { title, description, role, date, tools, tags } = Astro.props;
     )}
     <div class="meta-item">
       <dt>Date</dt>
-      <dd>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</dd>
+      {/* Year only. The month is not recorded for most projects, and showing
+          one derived from a placeholder day would state something untrue. */}
+      <dd>{date.getFullYear()}</dd>
     </div>
     {tools && tools.length > 0 && (
       <div class="meta-item">

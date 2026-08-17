@@ -1,7 +1,7 @@
 ---
 title: "Poly.Go.Nic"
 description: "A versatile outdoor bag for the urban explorer — transitioning from compact shoulder bag to comfortable seating mat in a single gesture."
-date: 2024-01-01
+date: 2026-01-01
 tags: ["Product Design", "Softgoods", "Foldable Structures"]
 role: "Industrial Designer"
 tools: ["Pattern Development", "Prototyping"]
@@ -31,7 +31,7 @@ gallery:
     alt: "The full-scale faceted panel in the workshop, and the folded piece being carried"
     span: 2
 featured: true
-order: 6 # B.Des coursework — newest first within the group
+order: 1 # B.Des coursework — newest first within the group
 ---
 
 ## Overview

@@ -1,7 +1,7 @@
 ---
 title: "Cebatero"
 description: "A contemporary reinterpretation of the Argentinian mate ritual — engineering a fool-proof vessel that keeps the soul of the ceremony."
-date: 2025-09-01
+date: 2024-01-01
 tags: ["Product Design", "Cultural Heritage", "Tableware"]
 role: "Industrial Designer"
 tools: ["CAD", "Prototyping"]
@@ -29,7 +29,7 @@ gallery:
   - src: "../../assets/projects/cebatero/07.jpg"
     alt: "Close detail of the polymer powder-coated wall where the twist of the form meets the rim"
 featured: false
-order: 1 # B.Des coursework — newest first within the group
+order: 3 # B.Des coursework — newest first within the group
 ---
 
 ## Overview

@@ -1,7 +1,7 @@
 ---
 title: "Lightshade Fabricator"
 description: "A single parametric system that turns any 3D surface into a glue-free plywood puzzle, producing infinite unique lighting solutions."
-date: 2025-03-01
+date: 2024-01-01
 tags: ["Parametric Design", "Digital Fabrication", "Lighting"]
 role: "Industrial Designer"
 tools: ["Parametric Modeling", "Nesting Algorithms", "CNC"]
@@ -20,7 +20,7 @@ gallery:
   - src: "../../assets/projects/lightshade-fabricator/03.jpg"
     alt: "A pendant shade with a wavy silhouette, lit from the centre"
 featured: false
-order: 3 # B.Des coursework — newest first within the group
+order: 4 # B.Des coursework — newest first within the group
 ---
 
 ## Overview

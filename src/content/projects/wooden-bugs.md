@@ -1,7 +1,7 @@
 ---
 title: "Wooden Bugs"
 description: "A modular wooden toy for children and adults, using embedded magnets to assemble and reconfigure endless bug-like creatures."
-date: 2024-06-01
+date: 2023-01-01
 tags: ["Toy Design", "Woodworking", "Modular System"]
 role: "Industrial Designer — in collaboration with Gal Porat"
 tools: ["Woodworking", "Embedded Magnets"]
@@ -18,7 +18,7 @@ gallery:
   - src: "../../assets/projects/wooden-bugs/04.jpg"
     alt: "A segmented wooden caterpillar beside a conical wooden form"
 featured: true
-order: 5 # B.Des coursework — newest first within the group
+order: 6 # B.Des coursework — newest first within the group
 ---
 
 ## Overview

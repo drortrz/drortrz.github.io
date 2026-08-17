@@ -1,7 +1,7 @@
 ---
 title: "Pottymon"
 description: "A comforting companion that eases potty training by turning a physiological principle — blowing — into an engaging activity."
-date: 2025-06-01
+date: 2025-01-01
 tags: ["Toy Design", "Ergonomics", "Child Development"]
 role: "Industrial Designer"
 tools: ["CAD", "Ergonomic Study"]
