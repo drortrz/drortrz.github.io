@@ -43,7 +43,15 @@ export async function publish({ log = console.log } = {}) {
   }
 
   const status = await git(['status', '--porcelain']);
-  if (!status) return { published: false, reason: 'nothing to publish' };
+  // A clean tree does not mean there is nothing to send: commits made by hand
+  // (or by GitHub Desktop) sit unpushed with nothing showing in status, and
+  // bailing here left them stranded on this machine.
+  const unpushed = Number(
+    await git(['rev-list', '--count', '@{upstream}..HEAD']).catch(() => '0')
+  );
+  if (!status && !unpushed) {
+    return { published: false, reason: 'nothing to publish' };
+  }
 
   log('Building…');
   try {
@@ -72,8 +80,12 @@ export async function publish({ log = console.log } = {}) {
     : 'Update portfolio content';
 
   log('Publishing…');
-  await git(['add', '-A']);
-  await git(['commit', '-m', message]);
+  // Only commit when there is actually something uncommitted — otherwise git
+  // exits non-zero and takes the whole publish down with it.
+  if (status) {
+    await git(['add', '-A']);
+    await git(['commit', '-m', message]);
+  }
 
   const branch = await git(['rev-parse', '--abbrev-ref', 'HEAD']);
   await git(['push', 'origin', branch]);
