@@ -247,6 +247,16 @@ const projects = (await getCollection('projects')).sort(
 
     // The loop must also wrap when the drift is not running — under reduced
     // motion, or while the visitor is flicking the track by hand.
+    // Wrapping writes scrollLeft, and writing scrollLeft cancels a native
+    // fling dead. When the browser owns the scroll, hold the wrap until the
+    // gesture has actually stopped: there is a full set-width of slack either
+    // side, so the track cannot run out underneath a swipe.
+    let wrapTimer = 0;
+    function scheduleWrap() {
+      clearTimeout(wrapTimer);
+      wrapTimer = window.setTimeout(normalise, 140);
+    }
+
     let normalising = false;
     track.addEventListener(
       'scroll',
@@ -265,7 +275,10 @@ const projects = (await getCollection('projects')).sort(
             // track for a beat and let the gesture finish.
             externalUntil = performance.now() + 200;
           }
-          normalise();
+          // Only wrap inline while our own loop is driving; otherwise wait
+          // for the gesture to finish.
+          if (running && !reduced && canHover) normalise();
+          else scheduleWrap();
           normalising = false;
         });
       },
