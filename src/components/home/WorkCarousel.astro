@@ -205,6 +205,18 @@ const projects = (await getCollection('projects')).sort(
     /** While set ahead of now, someone else is scrolling and we keep our hands off. */
     let externalUntil = 0;
 
+    // How long to keep the drift off the track after someone else moves it.
+    // Momentum keeps firing scroll events, so the window is refreshed for as
+    // long as the fling lasts; these are only the tails.
+    const HOLD_SCROLL = 400; // after a scroll event
+    const HOLD_TOUCH = 800; // while a finger is down
+    const HOLD_RELEASE = 600; // after it lifts, while momentum runs
+
+    /** Keep our hands off the track for a while. Never shortens an existing hold. */
+    function holdOff(ms: number) {
+      externalUntil = Math.max(externalUntil, performance.now() + ms);
+    }
+
     function normalise() {
       if (setWidth <= 0) return;
       // Keep the position inside the middle copy.
@@ -273,7 +285,7 @@ const projects = (await getCollection('projects')).sort(
             // A touch fling is the browser's own momentum, and writing
             // scrollLeft under it would cancel it. Hold the loop off the
             // track for a beat and let the gesture finish.
-            externalUntil = performance.now() + 200;
+            holdOff(HOLD_SCROLL);
           }
           // Only wrap inline while our own loop is driving; otherwise wait
           // for the gesture to finish.
@@ -284,6 +296,14 @@ const projects = (await getCollection('projects')).sort(
       },
       { passive: true }
     );
+
+    // A finger down is a hold, even before it has moved enough to scroll.
+    // Without this the drift is still writing scrollLeft as the touch begins,
+    // which is what made the row fight the gesture.
+    track.addEventListener('touchstart', () => holdOff(HOLD_TOUCH), { passive: true });
+    track.addEventListener('touchmove', () => holdOff(HOLD_TOUCH), { passive: true });
+    track.addEventListener('touchend', () => holdOff(HOLD_RELEASE), { passive: true });
+    track.addEventListener('touchcancel', () => holdOff(HOLD_RELEASE), { passive: true });
 
     // --- Motion -----------------------------------------------------------
     // The track behaves like a flywheel. Velocity is a quantity that carries
@@ -367,11 +387,7 @@ const projects = (await getCollection('projects')).sort(
     }
 
     function start() {
-      // Never on touch: the browser is already scrolling this row with its
-      // own momentum, and a loop writing scrollLeft every frame fights it —
-      // the track judders back and forth under the finger. A phone gets
-      // native scrolling; the drift is a pointer-device idea.
-      if (running || reduced || !canHover) return;
+      if (running || reduced) return;
       running = true;
       last = 0;
       frame = requestAnimationFrame(step);
