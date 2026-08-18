@@ -55,11 +55,13 @@ export async function publish({ log = console.log } = {}) {
       detail: (error.stdout || error.message || '').slice(-2000),
     };
   }
-
+  // Stage everything. Staging only src/ would commit and deploy *around* an
+  // edit to astro.config.mjs, public/ or the workflow: the push would succeed
+  // and the change would silently never reach the site.
   const changed = status
     .split('\n')
     .map(line => line.slice(3))
-    .filter(f => f.startsWith('src/'));
+    .filter(Boolean);
 
   const projects = changed
     .filter(f => f.startsWith('src/content/projects/'))
@@ -70,7 +72,7 @@ export async function publish({ log = console.log } = {}) {
     : 'Update portfolio content';
 
   log('Publishing…');
-  await git(['add', '-A', 'src']);
+  await git(['add', '-A']);
   await git(['commit', '-m', message]);
 
   const branch = await git(['rev-parse', '--abbrev-ref', 'HEAD']);
