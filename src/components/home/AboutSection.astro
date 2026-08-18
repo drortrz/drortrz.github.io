@@ -540,4 +540,11 @@ const languages = ['Hebrew (Native)', 'Spanish (Native)', 'English (Highly Profi
     if ((event.target as HTMLElement).closest('[data-tool]')) return;
     closeAll();
   });
+
+  // Scrolling anywhere lets the fan go. It is positioned against the viewport
+  // at the point it was opened, so once the page moves it is no longer beside
+  // the pill it belongs to — it just floats over whatever is now underneath.
+  // Releasing it is both what a reader expects and the only honest option.
+  window.addEventListener('scroll', () => closeAll(), { passive: true });
+  window.addEventListener('resize', () => closeAll(), { passive: true });
 </script>
