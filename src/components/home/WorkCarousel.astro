@@ -238,7 +238,11 @@ const projects = (await getCollection('projects')).sort(
 
     window.addEventListener('resize', () => {
       measure();
-      apply(position);
+      // Only re-place when the loop owns the track. On a phone the URL bar
+      // sliding away fires resize mid-scroll, and writing scrollLeft there
+      // snaps the row out from under the finger.
+      if (canHover && !reduced) apply(position);
+      else position = track!.scrollLeft;
     });
 
     // The loop must also wrap when the drift is not running — under reduced
@@ -350,7 +354,11 @@ const projects = (await getCollection('projects')).sort(
     }
 
     function start() {
-      if (running || reduced) return;
+      // Never on touch: the browser is already scrolling this row with its
+      // own momentum, and a loop writing scrollLeft every frame fights it —
+      // the track judders back and forth under the finger. A phone gets
+      // native scrolling; the drift is a pointer-device idea.
+      if (running || reduced || !canHover) return;
       running = true;
       last = 0;
       frame = requestAnimationFrame(step);
